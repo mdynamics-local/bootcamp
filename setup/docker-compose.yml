@@ -15,9 +15,12 @@ volumes:
   gitlab-config:
   gitlab-data:
   gitlab-logs:
+  postgres:
+  pgadmin:
 
 services:
   control:
+    container_name: control
     image: codespaces/ansible-control:3.0.0
     ports:
       - "8000:8000"
@@ -31,6 +34,7 @@ services:
     hostname: control
     restart: always
   frontend:
+    container_name: frontend
     image: codespaces/ansible-node-ubuntu:18.04
     ports:
        - "8079:8079"
@@ -42,6 +46,7 @@ services:
     hostname: frontend
     restart: always
   catalogue:
+    container_name: catalogue
     image: codespaces/ansible-node-ubuntu:18.04
     ports:
        - "7081:80"
@@ -53,6 +58,7 @@ services:
     hostname: catalogue
     restart: always
   carts:
+    container_name: carts
     image: codespaces/ansible-node-ubuntu:18.04
     ports:
       - "8081:80"
@@ -64,6 +70,7 @@ services:
     hostname: carts
     restart: always
   carts-db:
+    container_name: carts-db
     image: mongo
     restart: always
     environment:
@@ -71,6 +78,7 @@ services:
       MONGO_INITDB_ROOT_PASSWORD: admin123
 
   jenkins:
+    container_name: jenkins
     image: jenkinsci/blueocean
     ports:
       - 8080:8080
@@ -93,6 +101,7 @@ services:
       - docker
 
   docker:
+    container_name: docker
     image: docker:dind
     ports:
       - 2376:2376
@@ -112,6 +121,7 @@ services:
       - jenkins-data:/var/jenkins_home
 
   gitlab:
+    container_name: gitlab
     image: gitlab/gitlab-ce:latest
     ports:
       - "8888:80"
@@ -134,6 +144,7 @@ services:
       - gitlab-data:/var/opt/gitlab
 
   theia:
+    container_name: theia
     image: theiaide/theia:next
     init: true
     ports:
@@ -152,3 +163,65 @@ services:
     restart: always
     volumes:
       - ./:/home/project:cached
+
+  postgres:
+    container_name: postgres
+    image: postgres
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-postgres}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-changeme}
+      PGDATA: /data/postgres
+    volumes:
+       - postgres:/data/postgres
+    ports:
+      - "5432:5432"
+    networks:
+      custom:
+        ipv4_address: 192.168.61.21
+        aliases:
+          - postgres
+    restart: unless-stopped
+    privileged: false
+    domainname: mdynamics.in
+    hostname: postgres
+  
+  pgadmin:
+    container_name: pgadmin
+    image: dpage/pgadmin4
+    environment:
+      PGADMIN_DEFAULT_EMAIL: ${PGADMIN_DEFAULT_EMAIL:-pgadmin4@pgadmin.org}
+      PGADMIN_DEFAULT_PASSWORD: ${PGADMIN_DEFAULT_PASSWORD:-admin}
+      PGADMIN_CONFIG_SERVER_MODE: 'False'
+    volumes:
+       - pgadmin:/root/.pgadmin
+    ports:
+      - "${PGADMIN_PORT:-5050}:80"
+    networks:
+       custom:
+        ipv4_address: 192.168.61.22
+        aliases:
+          - pgadmin
+    restart: unless-stopped
+    privileged: false
+    domainname: mdynamics.in
+    hostname: pgadmin
+
+  web:
+    container_name: web
+    image: nginx
+    environment:
+      - NGINX_HOST=mdynamics.local
+      - NGINX_PORT=80
+    volumes:
+      - ~/workspace/m-dynamics.github.io:/usr/share/nginx/html
+    ports:
+      - "80:80"
+    networks:
+       custom:
+        ipv4_address: 192.168.61.23
+        aliases:
+          - web
+    restart: unless-stopped
+    privileged: false
+    domainname: mdynamics.in
+    hostname: web
